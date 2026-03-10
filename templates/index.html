@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pumpkin Leaf Disease Detection</title>
+
+    <!-- Tailwind CSS CDN for modern styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <style>
+        body {
+            background:  #0f766e ;
+        }
+    </style>
+</head>
+<body class="min-h-screen text-slate-100">
+    <div class="min-h-screen flex items-center justify-center px-4 py-10">
+        <div class="w-full max-w-4xl">
+            <!-- Header -->
+            <header class="mb-8 text-center">
+                <h1 class="text-3xl sm:text-4xl font-semibold tracking-tight text-slate-50">
+                    Pumpkin Leaf Disease Detection
+                </h1>
+                <p class="mt-3 text-sm sm:text-base text-slate-300 max-w-2xl mx-auto">
+                    Upload a pumpkin leaf image and select a model to detect potential diseases
+                    with confidence scores and class breakdown.
+                </p>
+            </header>
+
+            <div class="grid gap-6 lg:grid-cols-[minmax(0,1.4fr),minmax(0,1fr)] items-start">
+                <!-- Form Card -->
+                <section class="bg-slate-900/70 backdrop-blur border border-slate-800 shadow-2xl shadow-emerald-900/30 rounded-2xl p-6 sm:p-8">
+                    <h2 class="text-lg font-medium text-slate-100 mb-4">
+                        Analyse a new leaf
+                    </h2>
+                    <form action="/predict" method="post" enctype="multipart/form-data" class="space-y-5">
+                        <!-- Model select -->
+                        <div>
+                            <label for="model_name" class="block text-sm font-medium text-slate-200 mb-1.5">
+                                Select model
+                            </label>
+                            <div class="relative">
+                                <select
+                                    id="model_name"
+                                    name="model_name"
+                                    required
+                                    class="block w-full rounded-xl border border-slate-700 bg-slate-900/80 text-sm text-slate-100 px-3 py-2.5 pr-10 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition"
+                                >
+                                    {% for m in models %}
+                                    <option value="{{ m }}" {% if selected_model == m %}selected{% endif %}>
+                                        {{ m | capitalize }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center text-slate-500 text-xs">
+                                    ▼
+                                </span>
+                            </div>
+                            <p class="mt-1 text-xs text-slate-400">
+                                Different architectures may perform better for specific conditions.
+                            </p>
+                        </div>
+
+                        <!-- File upload -->
+                        <div>
+                            <label for="image" class="block text-sm font-medium text-slate-200 mb-1.5">
+                                Upload leaf image
+                            </label>
+                            <label
+                                for="image"
+                                class="flex flex-col items-center justify-center w-full cursor-pointer rounded-xl border-2 border-dashed border-slate-700 bg-slate-900/60 px-4 py-6 text-center hover:border-emerald-500/70 hover:bg-slate-900/80 transition"
+                            >
+                                <span class="text-sm font-medium text-slate-100">
+                                    Drop an image here, or <span class="text-emerald-400">browse</span>
+                                </span>
+                                <span class="mt-1 text-xs text-slate-400">
+                                    PNG or JPG, up to a few MB
+                                </span>
+                                <input
+                                    type="file"
+                                    id="image"
+                                    name="image"
+                                    accept="image/*"
+                                    required
+                                    class="hidden"
+                                />
+                            </label>
+                        </div>
+
+                        <!-- Submit button -->
+                        <div class="pt-2">
+                            <button
+                                type="submit"
+                                class="inline-flex items-center justify-center gap-2 rounded-full bg-emerald-500 px-5 py-2.5 text-sm font-semibold text-emerald-950 shadow-lg shadow-emerald-900/50 hover:bg-emerald-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-slate-950 transition"
+                            >
+                                <span>Generate prediction</span>
+                            </button>
+                        </div>
+                    </form>
+                </section>
+
+                <!-- Result Card -->
+                <section class="space-y-4">
+                    {% if prediction %}
+                    <div class="bg-slate-900/80 backdrop-blur border border-emerald-700/50 shadow-xl rounded-2xl p-6 sm:p-7">
+                        <h2 class="text-base font-semibold text-emerald-300 tracking-wide uppercase mb-2">
+                            Result
+                        </h2>
+                        <p class="text-sm text-slate-400 mb-4">
+                            Based on the selected model:
+                            <span class="font-medium text-slate-200">{{ selected_model | capitalize }}</span>
+                        </p>
+
+                        <div class="flex flex-wrap items-baseline gap-3">
+                            <p class="text-2xl font-semibold text-slate-50">
+                                {{ prediction }}
+                            </p>
+                            <span class="inline-flex items-center rounded-full bg-emerald-500/10 border border-emerald-500/40 px-3 py-1 text-xs font-medium text-emerald-300">
+                                Confidence: {{ (score * 100) | round(2) }}%
+                            </span>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="bg-slate-900/60 backdrop-blur border border-slate-800 rounded-2xl p-5 sm:p-6 text-sm text-slate-300">
+                        <h2 class="text-sm font-semibold text-slate-100 mb-2">
+                            No prediction yet
+                        </h2>
+                        <p>
+                            Submit a leaf image using the form to view the predicted disease
+                            class and confidence score here.
+                        </p>
+                    </div>
+                    {% endif %}
+
+                    <!-- Class names list -->
+                    <div class="bg-slate-900/60 backdrop-blur border border-slate-800 rounded-2xl p-5 sm:p-6">
+                        <h3 class="text-sm font-semibold text-slate-100 mb-3">
+                            Supported classes
+                        </h3>
+                        <ul class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-slate-300">
+                            {% for c in class_names %}
+                            <li class="flex items-center gap-2">
+                                <span class="h-1.5 w-1.5 rounded-full bg-emerald-400/80"></span>
+                                <span>{{ c }}</span>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Footer -->
+            <footer class="mt-10 text-center text-[11px] text-slate-500">
+                <p>
+                    Powered by PyTorch models &mdash; built for pumpkin leaf health monitoring.
+                </p>
+            </footer>
+        </div>
+    </div>
+</body>
+</html>
